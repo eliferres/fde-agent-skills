@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Validate skills, agents, links, and prose rules
+        run: |
+          python3 scripts/validate.py --version
+          python3 scripts/validate.py
+      - name: Run unit tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Smoke-test installer dry run
+        run: bash scripts/install.sh --target claude --with-agents --dry-run
