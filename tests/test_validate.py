@@ -63,14 +63,15 @@ class ValidateRepoTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         data = json.loads(proc.stdout)
         self.assertTrue(data["ok"])
-        self.assertEqual(data["skills_checked"], 10)
-        self.assertEqual(data["agents_checked"], 5)
+        self.assertEqual(data["skills_checked"], 18)
+        self.assertEqual(data["agents_checked"], 6)
+        self.assertEqual(data["examples_checked"], 3)
         self.assertEqual(data["findings"], [])
 
     def test_version_flag(self) -> None:
         proc = run_validate("--version")
         self.assertEqual(proc.returncode, 0)
-        self.assertIn("validate.py 0.1.0", proc.stdout)
+        self.assertIn("validate.py 0.2.0", proc.stdout)
 
     def test_missing_root_exits_two(self) -> None:
         proc = run_validate("--root", "/nonexistent/path/for/fde-agent-skills-test")
@@ -143,6 +144,41 @@ Body.
             self.assertIn("agent-name-mismatch", rules)
             self.assertIn("agent-description-short", rules)
             self.assertIn("agent-tools-missing", rules)
+
+    def test_catches_skill_and_agent_missing_from_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_valid_skill(root, "listed-skill")
+            write_valid_skill(root, "unlisted-skill")
+            agent = root / "agents" / "checker.md"
+            agent.parent.mkdir(parents=True, exist_ok=True)
+            agent.write_text(
+                '---\nname: checker\ndescription: "Read-only checker used as a fixture."\ntools: Read\n---\n\nBody.\n',
+                encoding="utf-8",
+            )
+            (root / "README.md").write_text(
+                "# Fixture\n\n[listed](skills/listed-skill/SKILL.md)\n", encoding="utf-8"
+            )
+            proc = run_validate("--root", str(root), "--json")
+            self.assertEqual(proc.returncode, 1)
+            messages = [i["message"] for i in json.loads(proc.stdout)["findings"] if i["rule"] == "readme-entry-missing"]
+            self.assertEqual(len(messages), 2)
+            self.assertTrue(any("skills/unlisted-skill/SKILL.md" in m for m in messages))
+            self.assertTrue(any("agents/checker.md" in m for m in messages))
+
+    def test_catches_reference_example_that_does_not_parse(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skill = write_valid_skill(root, "example-skill")
+            examples = skill.parent / "examples"
+            examples.mkdir()
+            (examples / "good.py").write_text("print('ok')\n", encoding="utf-8")
+            (examples / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+            proc = run_validate("--root", str(root), "--json")
+            self.assertEqual(proc.returncode, 1)
+            data = json.loads(proc.stdout)
+            self.assertEqual(data["examples_checked"], 2)
+            self.assertEqual([i["path"] for i in data["findings"]], ["skills/example-skill/examples/broken.py"])
 
 
 if __name__ == "__main__":

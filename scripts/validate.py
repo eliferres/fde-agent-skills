@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Agent Skills, subagent specs, links, and prose hygiene in this repository.
+"""Validate Agent Skills, subagent specs, reference examples, links, and prose hygiene in this repository.
 
 Standard library only (Python 3.9+).
 
@@ -11,13 +11,14 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
 from pathlib import Path
 from typing import Any
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,63}$")
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
@@ -157,9 +158,48 @@ def check_local_links(root: Path, file_path: Path, text: str, findings: list[dic
                 )
 
 
+def check_examples(root: Path, skill_dir: Path, findings: list[dict[str, Any]]) -> int:
+    """Verify every reference example under a skill's examples/ folder is valid Python."""
+    examples = sorted((skill_dir / "examples").glob("*.py")) if (skill_dir / "examples").is_dir() else []
+    for example in examples:
+        try:
+            ast.parse(example.read_text(encoding="utf-8"), filename=str(example))
+        except (SyntaxError, UnicodeDecodeError) as exc:
+            findings.append(
+                {
+                    "rule": "example-syntax",
+                    "path": str(example.relative_to(root)),
+                    "line": getattr(exc, "lineno", 0) or 0,
+                    "message": f"reference example does not parse: {exc.__class__.__name__}",
+                }
+            )
+    return len(examples)
+
+
+def check_readme_index(root: Path, skill_files: list[Path], agent_files: list[Path],
+                       findings: list[dict[str, Any]]) -> None:
+    """Verify README.md links every skill and every agent, so nothing ships unlisted."""
+    readme = root / "README.md"
+    if not readme.is_file():
+        return
+    targets = {m.group(1).strip().split("#", 1)[0] for m in LINK_RE.finditer(readme.read_text(encoding="utf-8"))}
+    for item in [*skill_files, *agent_files]:
+        rel = item.relative_to(root).as_posix()
+        if rel not in targets:
+            findings.append(
+                {
+                    "rule": "readme-entry-missing",
+                    "path": "README.md",
+                    "line": 0,
+                    "message": f"README.md does not link {rel}",
+                }
+            )
+
+
 def validate_repo(root: Path) -> dict[str, Any]:
     """Run all checks on a repository root and return a structured report."""
     findings: list[dict[str, Any]] = []
+    examples_checked = 0
     skills_dir = root / "skills"
     agents_dir = root / "agents"
 
@@ -232,6 +272,7 @@ def validate_repo(root: Path) -> dict[str, Any]:
                     )
         check_markdown_text(rel_path, text, findings)
         check_local_links(root, skill_file, text, findings)
+        examples_checked += check_examples(root, skill_file.parent, findings)
 
     for agent_file in agent_files:
         rel_path = str(agent_file.relative_to(root))
@@ -288,10 +329,13 @@ def validate_repo(root: Path) -> dict[str, Any]:
             check_markdown_text(doc_name, text, findings)
             check_local_links(root, doc_path, text, findings)
 
+    check_readme_index(root, skill_files, agent_files, findings)
+
     return {
         "root": str(root),
         "skills_checked": len(skill_files),
         "agents_checked": len(agent_files),
+        "examples_checked": examples_checked,
         "findings": findings,
         "ok": len(findings) == 0,
     }
@@ -300,7 +344,7 @@ def validate_repo(root: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="validate.py",
-        description="Validate Agent Skills, subagent specs, local links, and prose rules.",
+        description="Validate Agent Skills, subagent specs, reference examples, local links, and prose rules.",
     )
     parser.add_argument(
         "--root",
@@ -333,7 +377,8 @@ def main(argv: list[str] | None = None) -> int:
         if report["ok"]:
             print(
                 f"PASS: {report['skills_checked']} skills and "
-                f"{report['agents_checked']} agents validated with 0 findings"
+                f"{report['agents_checked']} agents validated with 0 findings "
+                f"({report['examples_checked']} reference examples parsed)"
             )
         else:
             print(f"FAIL: {len(report['findings'])} finding(s) in {root}")
