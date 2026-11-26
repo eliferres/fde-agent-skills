@@ -23,7 +23,7 @@ Options:
                                     project -> <dest>/.claude/skills (requires --dest)
   --dest <path>                     Custom base directory (required for --target project; overrides home)
   --mode <symlink|copy>             Install via symlinks or standalone copies (default: symlink)
-  --with-agents                     Also install the 5 subagent specs from agents/
+  --with-agents                     Also install the subagent specs from agents/
   --dry-run                         Print planned actions without changing any files
   -h, --help                        Show this help message
 EOF

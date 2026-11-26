@@ -28,6 +28,9 @@ Every figure an operator or controller reads must trace back to one named system
 7. **Separate base cost from landed costs.** In unit economics and costing masters, keep base supplier cost, freight, duties/tariffs, and packaging in separate columns so margin shifts remain diagnosable.
 8. **Label unverified figures explicitly.** Mark any figure not yet tied to its primary source as `inference` or `estimated`. Never mix audited actuals and estimates without clear visual separation.
 
+9. **Replicate the prior period's treatment.** Before classifying an item, check how the prior period treated the same kind of item from the same vendor and match it. Only the controller changes a treatment, and every change records a written reason and date.
+10. **Flag, never move silently.** When a figure looks wrong, do not reclassify, net, or adjust it quietly. Raise a flag with the evidence and the proposed correction, and leave the books unchanged until a person approves.
+
 ## Step-by-step protocol
 
 ### 1. Build the system-of-record table
@@ -62,6 +65,35 @@ Every delivered report or pipeline ships with automated tie-out checks:
 
 Before trusting a manual or statistical forecast model, backtest prior forecasts against realized ERP shipments or accounting actuals to expose systematic bias (such as omitted already-shipped orders or spreadsheet sum errors).
 
+### 5. Check treatment against the prior period
+
+This query lists every line whose account differs from the same vendor's account in the prior period. Each row is a flag for the controller, not a change.
+
+```sql
+SELECT cur.vendor_id, cur.doc_id, prev.account_id AS prior_account, cur.account_id AS current_account
+FROM ledger_lines cur
+JOIN LATERAL (
+  SELECT p.account_id
+  FROM ledger_lines p
+  WHERE p.vendor_id = cur.vendor_id AND p.period = '2026-02'
+  ORDER BY p.posted_at DESC
+  LIMIT 1
+) prev ON true
+WHERE cur.period = '2026-03' AND cur.account_id <> prev.account_id;
+```
+
+## Worked example
+
+This sample output shows a March close for a made-up company where one bill uses a different account than in February, so the report flags it and leaves it alone. Card spend ties to the card statement to the cent.
+
+```text
+FLAG 1   Cedar Office Supply, bill 2291, 612.40
+         February: Office Supplies. March draft: Equipment.
+         Proposed: keep Office Supplies (same items as February). Books unchanged until approved.
+
+TIE-OUT  March card spend: ledger 8,214.55 = card statement 8,214.55 (difference 0.00)
+```
+
 ## Verification checklist
 
 - System-of-record table is written and agreed before cross-system joins run.
@@ -70,6 +102,9 @@ Before trusting a manual or statistical forecast model, backtest prior forecasts
 - 100% of raw fee types and active ad accounts in the period are mapped or explicitly listed as excluded with a reason.
 - Automated tie-out assertions run and pass with exact pass counts recorded (zero silent skips).
 - Every remaining variance has a named root cause and owner.
+
+- Every change of treatment from the prior period lists a reason and an approver.
+- Every reclassification, netting, or adjustment carries a flag and an approval.
 
 ## Boundaries
 

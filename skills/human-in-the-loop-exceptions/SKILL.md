@@ -23,6 +23,10 @@ Automate the deterministic 85% to 90%, route the uncertain 10% to 15% into one s
 5. **Persist rulings as learned rules.** When a reviewer resolves an exception ("Always classify vendor X as Software Hosting" or "Ignore fee code Y"), offer a one-click option to save the ruling to a `learned_rules` table scoped by entity and key so future runs handle that case deterministically.
 6. **Guard against approval-card forgery.** Strip or reject invisible Unicode controls, control characters, and line-drawing borders in untrusted fields before rendering an approval card so external text cannot spoof a button or status line.
 
+7. **Include four required fields on every held item.** Every hold states what the item is, why it stopped, what the job will do if approved, and who can decide. Fix any hold that lacks one of these four fields before sending it.
+8. **Separate buttons that mark from buttons that write.** A mark button (seen, assign to me, snooze) updates the hold row only and acts at once. A write button (approve, approve and save rule) states its effect in its label, passes verification and the approver list check, and runs through the idempotent write path.
+9. **Keep saved rules visible.** Every saved rule records its scope, its author, and the hold it came from, and lets a person turn it off at any time. Each run's summary states how many items saved rules cleared.
+
 ## Step-by-step protocol
 
 ### 1. Define the exception and learned-rule tables
@@ -83,6 +87,29 @@ On webhook receipt:
 4. If `Approve + save rule` was selected, write to `learned_rules` inside the same transaction.
 5. Enqueue the concrete item for execution through the idempotent write path, then update the original card with the final outcome and actor name.
 
+### 5. Separate buttons that mark from buttons that write
+
+Every card button is one of two kinds, mark or write. The handler runs different checks and actions for each kind.
+
+| Button | Kind | What happens |
+| --- | --- | --- |
+| Seen, Assign to me, Snooze 1 day | mark | Updates the hold row only. |
+| Approve once | write | Verified and authorised, then the idempotent write path. |
+| Approve + save rule | write | As above, plus one `learned_rules` row in the same transaction. |
+| Reject | mark | Closes the hold with a note. Nothing is written to the target system. |
+
+## Worked example
+
+A bill from Cedar Office Supply, a made-up vendor, arrives 34% above that vendor's 90-day average. The job holds the bill and sends the card below. The reviewer chooses `Approve + save rule`, so next month's bill in the same range clears without a card.
+
+```text
+HELD: bill from Cedar Office Supply, 612.40 (bill no. 2291)
+Why: the amount is 34% above this vendor's 90-day average (457.00)
+If approved: post 612.40 to Office Supplies, due 30 March
+Who decides: accounts payable lead
+[Seen] [Approve once] [Approve + save rule] [Reject]
+```
+
 ## Verification checklist
 
 - A planted anomaly (for example >20% variance or unmapped vendor) pauses in `held_exceptions` while valid items in the same run complete normally.
@@ -90,6 +117,10 @@ On webhook receipt:
 - An invalid or replayed webhook signature returns HTTP 401 and changes zero rows.
 - Double-clicking Approve applies the action at most once.
 - Choosing `Approve + save rule` causes the next run with the same key to clear automatically without paging a human.
+
+- The job refuses to send any hold that lacks one of the four required fields.
+- A mark button updates the hold row only and writes nothing to the target system.
+- Each run summary states how many items saved rules cleared.
 
 ## Boundaries
 

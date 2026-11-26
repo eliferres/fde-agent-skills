@@ -7,14 +7,14 @@ description: "Use when any script, automation, or agent writes values, formulas,
 
 ## The failure mode
 
-Automated writes to shared spreadsheets fail catastrophically when treated like simple file overwrites:
+Automated writes fail when code treats shared spreadsheets like file overwrites.
 
-1. Writing a computed number on top of a live formula permanently breaks downstream totals.
-2. Sending an overly broad `fields` update mask wipes out existing cell formatting, comments, or data validation rules across adjacent columns.
-3. Looking up tabs by display name or columns by letter (`Column G`) silently corrupts the wrong cells the day a teammate renames a tab or inserts a column.
-4. Two concurrent sessions writing to the same workbook overwrite each other's updates with no diff trail.
+1. Writing numbers over live formulas breaks downstream totals.
+2. A broad `fields` mask wipes formatting, comments, or validation in adjacent columns.
+3. Lookups by tab name or column letter (`Column G`) silently hit the wrong cells after a rename or a column insert.
+4. Concurrent writers overwrite each other on one workbook with no diff trail.
 
-Treat every live spreadsheet like a shared production database: lock the writer, snapshot first, plan every target cell explicitly, write with narrow masks, and diff every single cell on read-back.
+Treat live spreadsheets like shared production databases: lock the writer, snapshot first, plan target cells, use narrow masks, and diff every cell on read-back.
 
 ## Core rules
 
@@ -79,7 +79,23 @@ Read back every affected tab after the write:
 - Every planned cell matches its planned value or formula.
 - Every formula cell outside the write plan retains its exact formula string.
 - Zero cells outside `planned_writes` (and `expected_recalculated_totals` for formula values) changed between pre-write snapshot and post-write read-back.
-- Print the exact verification count (for example `351,029 cells verified, 0 off-plan diffs`).
+- Print the exact verification count (for example `1,280 cells verified, 0 off-plan diffs`).
+
+## Worked example
+
+In this sample run, a job updates two March figures on a shared costing sheet and adds one note that keeps the old value. After the write, the read-back compares every cell on the sheet with the pre-write snapshot to confirm zero off-plan changes.
+
+```text
+Plan for sheet 1048291, column "March actual"
+  Freight       1,180.00 -> 1,240.00
+  Packaging       310.00 ->   295.50
+  Note on Freight: "was 1,180.00 until 2 March; carrier invoice 5521"
+
+Read-back: 1,280 cells compared with the snapshot
+  2 planned values and 1 planned note changed
+  1 total recalculated by its own formula
+  0 off-plan changes
+```
 
 ## Verification checklist
 

@@ -26,7 +26,7 @@ class InstallScriptTests(unittest.TestCase):
             proc = run_install("--target", "claude", "--dest", str(dest), "--with-agents", "--dry-run")
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
             self.assertFalse(dest.exists())
-            self.assertIn("10 skill(s), 5 agent(s)", proc.stdout)
+            self.assertIn("18 skill(s), 6 agent(s)", proc.stdout)
 
     def test_symlink_install_and_idempotent_reinstall(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -35,8 +35,8 @@ class InstallScriptTests(unittest.TestCase):
             self.assertEqual(proc1.returncode, 0, proc1.stdout + proc1.stderr)
             skills_installed = sorted((dest / "skills").iterdir())
             agents_installed = sorted((dest / "agents").iterdir())
-            self.assertEqual(len(skills_installed), 10)
-            self.assertEqual(len(agents_installed), 5)
+            self.assertEqual(len(skills_installed), 18)
+            self.assertEqual(len(agents_installed), 6)
             for p in skills_installed:
                 self.assertTrue(p.is_symlink())
                 self.assertTrue((p / "SKILL.md").is_file())
@@ -55,7 +55,7 @@ class InstallScriptTests(unittest.TestCase):
             proc1 = run_install("--target", "project", "--dest", str(repo_dest), "--mode", "copy")
             self.assertEqual(proc1.returncode, 0, proc1.stdout + proc1.stderr)
             skills_dir = repo_dest / ".claude" / "skills"
-            self.assertEqual(len(list(skills_dir.iterdir())), 10)
+            self.assertEqual(len(list(skills_dir.iterdir())), 18)
             for p in skills_dir.iterdir():
                 self.assertFalse(p.is_symlink())
                 self.assertTrue((p / "SKILL.md").is_file())

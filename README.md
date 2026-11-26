@@ -2,7 +2,7 @@
 
 Production agent skills, read-only subagent specs, and forward-deployed engineering methodology for Claude Code, OpenAI Codex, Cursor, and Antigravity.
 
-Ten domain-neutral skills and five drop-in subagents extracted from live production systems (data warehouses, idempotent accounting automations, Postgres migrations, reconciled financial reporting, and parallel agent orchestration). Zero runtime dependencies, Python 3.9+ validator, and CI-tested.
+This repository holds eighteen domain-neutral skills and six drop-in subagent specs from live production systems (data warehouses, idempotent accounting automations, Postgres migrations, reconciled financial reporting, go-live control, and parallel agent orchestration). Three skills ship a runnable reference example with tests, and the repository uses zero runtime dependencies with a Python 3.9+ validator tested in CI.
 
 [![ci](https://github.com/eliferres/fde-agent-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/eliferres/fde-agent-skills/actions/workflows/ci.yml)
 ![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -11,7 +11,7 @@ Ten domain-neutral skills and five drop-in subagents extracted from live product
 
 ## Install in ten seconds
 
-Clone the repository and install all ten skills into your agent runtime:
+Clone the repository and install every skill into your agent runtime:
 
 ```bash
 git clone https://github.com/eliferres/fde-agent-skills.git
@@ -23,7 +23,7 @@ cd fde-agent-skills
 # Install skills for Claude Code (~/.claude/skills)
 ./scripts/install.sh --target claude
 
-# Install skills + five subagent specs (~/.claude/skills and ~/.claude/agents)
+# Install skills + subagent specs (~/.claude/skills and ~/.claude/agents)
 ./scripts/install.sh --target claude --with-agents
 
 # Install skills for OpenAI Codex / Antigravity (~/.agents/skills)
@@ -51,10 +51,28 @@ Every skill follows the open `SKILL.md` format (YAML frontmatter with concrete a
 | [`upfront-fde-discovery`](skills/upfront-fde-discovery/SKILL.md) | Runs client engagements through Questions -> Plan -> Live: search before asking, one structured discovery sitting, visual-first specs, and build-switched-off delivery. |
 | [`production-job-observability`](skills/production-job-observability/SKILL.md) | Replaces silent cron failures with two-transaction run ledgers, dead-man missed-run alerts, database-enforced log redaction, and quiet-day summary suppression. |
 | [`plain-english-engineering-comms`](skills/plain-english-engineering-comms/SKILL.md) | Enforces answer-first updates, unmet-work-first status reports, strongest-counter rigor, five-line decision cards, and an anti-AI-filler edit pass. |
+| [`switch-gated-go-live`](skills/switch-gated-go-live/SKILL.md) | Splits deploy from go-live with one off-by-default switch per write path that requires a dated approval, a tested undo, a small first run, and a read-back. |
+| [`exact-head-approvals`](skills/exact-head-approvals/SKILL.md) | Ties the approval, the review, and the tests to one full commit id and lets one landing through at a time with a merge lock. |
+| [`source-sweep-before-figures`](skills/source-sweep-before-figures/SKILL.md) | Reads every system that holds a fact and reconciles the differences before a plan states a figure. |
+| [`fact-checked-drafts`](skills/fact-checked-drafts/SKILL.md) | Attaches a claim-and-confidence block to an email or memo draft, works every claim to High, and cuts what cannot be verified. |
+| [`read-only-system-integration`](skills/read-only-system-integration/SKILL.md) | Proves a new connection with one read, names the account it reaches, grants least privilege, and keeps writes out of interactive sessions. |
+| [`drop-folder-ingestion`](skills/drop-folder-ingestion/SKILL.md) | Reads each dropped file once by checksum in a fixed order, holds any file with the wrong shape, and offers a count-only dry run. |
+| [`executive-decision-briefs`](skills/executive-decision-briefs/SKILL.md) | Puts a choice on two pages: options side by side, the cost, what we accept, when the other option wins, and what to confirm. |
+| [`session-handover-at-limits`](skills/session-handover-at-limits/SKILL.md) | Saves state, a one-line pickup, and per-thread status so work survives a context, usage, or account limit. |
+
+## Reference examples
+
+Three skills ship a small runnable example in an `examples/` folder inside the skill, and each example uses the Python standard library only and runs in the test suite.
+
+| Example | What it shows |
+| --- | --- |
+| [`switch_gate.py`](skills/switch-gated-go-live/examples/switch_gate.py) | A switch per write path that fails closed, refuses an incomplete approval, limits the first live run, and turns itself off on a failed read-back. |
+| [`check_landing.py`](skills/exact-head-approvals/examples/check_landing.py) | A landing check that refuses unless the approval, the review, the tests and the merge lock all match the head commit. |
+| [`ingest.py`](skills/drop-folder-ingestion/examples/ingest.py) | A checksum ledger for dropped CSV files with held and waiting states and a dry run that writes nothing. |
 
 ## Subagent templates
 
-Five clean, portable agent specifications live under `agents/` and pair directly with the skills above:
+Six clean, portable agent specifications live under `agents/` and pair directly with the skills above:
 
 | Agent | Role | Access |
 | --- | --- | --- |
@@ -63,6 +81,7 @@ Five clean, portable agent specifications live under `agents/` and pair directly
 | [`researcher`](agents/researcher.md) | Primary-source documentation and API verification with strongest counter. | Read-only + web |
 | [`implementer`](agents/implementer.md) | Tightly scoped worktree builder that runs tests and real end-to-end output. | Read + write |
 | [`advisor`](agents/advisor.md) | Second opinion on architecture, specs, and root-cause diagnoses. | Read-only |
+| [`design-reviewer`](agents/design-reviewer.md) | Fresh-eyes design judge for screens, prototypes, dashboards, and PDFs that checks clarity at a glance, the word ceiling, fidelity to the named reference, and both desktop and phone. | Read-only |
 
 ## Where these rules came from
 
@@ -78,7 +97,7 @@ Read [`METHODOLOGY.md`](METHODOLOGY.md) for the end-to-end architecture connecti
 
 ## Validate locally
 
-The repository ships with a zero-dependency Python 3.9+ validator and `unittest` suite that checks YAML frontmatter, required skill sections, internal links, secret patterns, and writing standards:
+The repository ships with a zero-dependency Python 3.9+ validator and `unittest` suite that checks YAML frontmatter, required skill sections, reference examples, the README index, internal links, secret patterns, and writing standards:
 
 ```bash
 python3 scripts/validate.py

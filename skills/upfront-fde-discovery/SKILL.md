@@ -7,13 +7,13 @@ description: "Use before building any new client automation, internal platform, 
 
 ## The failure mode
 
-Forward-deployed engineering engagements stall or ship the wrong thing for three recurring reasons:
+Forward-deployed engagements stall or ship the wrong thing for three reasons.
 
-1. **Endless back-and-forth chat interrogations:** Asking stakeholders twenty scattered questions across five chat threads guarantees answered questions get lost and asked again a week later.
-2. **Building before checking existing truth:** Asking stakeholders facts that already live in the codebase, database, or prior documents wastes executive time and erodes trust.
-3. **Shipping silently into live systems:** Merging a new automation that immediately sends customer emails or writes accounting entries before stakeholders verify dry-run output causes irreversible mistakes.
+1. **Chat loops:** Twenty scattered questions in five threads lose answers and return a week later.
+2. **Unchecked truth:** Asking stakeholders facts in code, databases, or prior documents wastes executive time and erodes trust.
+3. **Silent launches:** Live automations that email customers or write accounting entries before dry-run checks cause irreversible mistakes.
 
-Run every new automation or major feature through three clear stages: **Questions -> Plan -> Live**.
+Run every new automation or major feature through three stages: **Questions -> Plan -> Live**.
 
 ## Core rules
 
@@ -55,6 +55,19 @@ Save the approved spec cleanly in `SPEC.md` (or the project record) once the own
 3. Pass automated tests and a fresh read-only review.
 4. Present a crisp go-live card stating exactly what the job will write or send on its next scheduled run, when that run happens, and how to roll back.
 5. Flip the write switch only after explicit owner confirmation, then verify the first real scheduled run end to end.
+
+## Worked example
+
+This example shows one made-up question from a six-question discovery pass. It lists the context, the current behavior, and a recommendation so the stakeholder can answer in one line.
+
+```markdown
+## Question 3 of 6
+**Which date decides the invoice month: the ship date or the order date?**
+Why it matters: 14 February orders shipped in March.
+Today: the spreadsheet uses the order date.
+Recommended: the ship date, to match when the goods left.
+Answer: ______
+```
 
 ## Verification checklist
 
