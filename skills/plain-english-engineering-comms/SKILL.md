@@ -7,13 +7,13 @@ description: "Use when writing engineering updates, go-live decision cards, inci
 
 ## The failure mode
 
-Technical teams lose stakeholder trust and slow down decisions in three predictable ways:
+Technical teams lose stakeholder trust and slow decisions in three ways.
 
-1. **Burying the decision:** Writing four paragraphs of background before stating what broke, what is still unmet, or what needs approval.
-2. **Rubber-stamping proposals:** Agreeing with a stakeholder's first idea without surfacing the strongest counter-argument or second-order operational risks.
-3. **AI-sounding filler:** Delivering prose padded with inflated buzzwords, em dashes, hedged qualifiers, and vague claims that hide missing evidence.
+1. **Buried decisions:** Four background paragraphs hide what broke, unmet work, or approvals.
+2. **Rubber-stamping:** Teams accept first ideas without the strongest counter or second-order operational risks.
+3. **AI filler:** Buzzwords, em dashes, hedges, and vague claims hide missing evidence.
 
-Answer first in plain, active English, lead status updates with what is still unmet, surface the strongest counter before agreeing, and format high-stakes decisions into one five-line card.
+Answer first in plain, active English, lead with unmet work, state the strongest counter before agreeing, and put high-stakes decisions in one five-line card.
 
 ## Core rules
 
@@ -38,7 +38,7 @@ Kind: Production invoicing switch-on · Ready for live
 **Decide:** Enable scheduled daily invoicing writes for tomorrow's 8:00 AM run?
 **Recommend:** Yes, switch on after confirming the 21-order dry run tied to source orders.
 **Impact:** Shipped wholesale orders create verified invoices, archive PDFs, and email customers automatically while holding edge cases in Slack.
-**Safety:** 1,356 automated tests and a fresh read-only review passed; rollback is flipping one database switch off or reverting the commit.
+**Safety:** 212 automated tests and a fresh read-only review passed; rollback is flipping one database switch off or reverting the commit.
 **Catch:** Split purchase orders with manual broker discounts still pause in the review queue until the first rule is saved.
 ```
 
@@ -51,6 +51,18 @@ Kind: Production invoicing switch-on · Ready for live
 ### 3. Keep small decisions small
 
 For a trivial yes/no question with low blast radius, skip the five-line card and ask in one plain sentence.
+
+## Worked example
+
+This example shows the same made-up status update twice. The second version leads with what is still open and gives numbers a reader can check.
+
+```text
+Before: "Great progress this week! The team has been working hard on the export and most things
+         are in good shape, although there are a few items we are still looking into."
+
+After:  "Still open: the email step is not tested. Done: the export passes 14 tests and its row
+         count ties to the order system (214). Next: test the email step on Thursday."
+```
 
 ## Verification checklist
 

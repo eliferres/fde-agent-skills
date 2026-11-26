@@ -24,6 +24,10 @@ Treat observability as a database-backed contract: record every run's open and c
 5. **Quiet-day suppression for human summaries.** Record every healthy run in the database and metrics backend, but suppress routine "0 items to process, all good" pings to human chat channels. Page humans only when a job fails, misses its window, surfaces a discrepancy, or requires an explicit approval.
 6. **Health checks stay isolated from business logic.** Expose a lightweight `/api/health` endpoint checking database connectivity and critical dependencies without executing heavy queries or exposing internal version details.
 
+7. **Use one meaning for each outcome.** Every job reports one of four outcomes: `good` (did all it should), `partial` (some items done, some held or failed), `failed` (stopped on an error), or `skipped` (ran and found nothing to do, or its switch is off).
+8. **Write one step row per step.** Each step of a run writes one row with its outcome and counts. Derive the run's outcome from its steps, and never type it by hand.
+9. **Send one run email a day.** Keep per-run pings suppressed and send one daily email with a fixed layout that covers every job and leads with what needs a person. The email arrives every day, so a missing email is itself a signal.
+
 ## Step-by-step protocol
 
 ### 1. Define the run ledger and schedule contract
@@ -73,6 +77,50 @@ Wholesale invoicing (2026-11-24 08:00 ET): 21 orders processed, 21 invoices conf
 
 If 0 orders were due and 0 errors occurred, log to `job_runs` and skip human notifications.
 
+### 5. Record steps and derive the run outcome
+
+Add the `outcome` column to `job_runs` and create the `job_run_steps` table to store each step's outcome and counts. Derive each run's outcome from its step rows with one query.
+
+```sql
+ALTER TABLE job_runs ADD COLUMN outcome text
+  CHECK (outcome IN ('good', 'partial', 'failed', 'skipped'));
+
+CREATE TABLE job_run_steps (
+  run_id     bigint NOT NULL REFERENCES job_runs(id),
+  step_no    integer NOT NULL,
+  step_name  text NOT NULL,
+  outcome    text NOT NULL CHECK (outcome IN ('good', 'partial', 'failed', 'skipped')),
+  items_in   integer NOT NULL DEFAULT 0,
+  items_out  integer NOT NULL DEFAULT 0,
+  note       text NOT NULL DEFAULT '',
+  PRIMARY KEY (run_id, step_no)
+);
+
+SELECT run_id,
+       CASE
+         WHEN bool_or(outcome = 'failed')   THEN 'failed'
+         WHEN bool_or(outcome = 'partial')  THEN 'partial'
+         WHEN bool_and(outcome = 'skipped') THEN 'skipped'
+         ELSE 'good'
+       END AS run_outcome
+FROM job_run_steps
+GROUP BY run_id;
+```
+
+## Worked example
+
+Four made-up jobs ran on 2 March. The daily email leads with the one thing that needs a person and gives each job one line.
+
+```text
+Daily run report, 2 March
+NEEDS A PERSON: 2 items held in invoicing (see the review queue)
+
+invoicing      partial   21 read, 19 written, 2 held
+bank feed      good      140 read, 140 written
+vendor bills   skipped   its switch is off
+stock sync     failed    step 2 of 4 (fetch counts): the source timed out
+```
+
 ## Verification checklist
 
 - Every production job opens and closes a `job_runs` row in two separate transactions.
@@ -80,6 +128,10 @@ If 0 orders were due and 0 errors occurred, log to `job_runs` and skip human not
 - Attempting to write `$1,250` or a token prefix into `summary_text` is rejected by the database check constraint.
 - Every enabled job has a configured `max_gap_minutes` row and an active alert rule verified by a test alert.
 - Routine zero-action runs log to the database without spamming Slack or email.
+
+- Every job reports one of the same four outcomes (`good`, `partial`, `failed`, or `skipped`).
+- Every step of a run writes one row in `job_run_steps`, and the run's outcome equals the outcome derived from its steps.
+- The daily email arrives on a quiet day too.
 
 ## Boundaries
 

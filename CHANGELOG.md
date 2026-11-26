@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- All ten original skills gain a `Worked example` section on made-up data. Six of them gain new rules, one new protocol step, and new checks: `safe-postgres-migrations`, `idempotent-external-writes`, `human-in-the-loop-exceptions`, `production-job-observability`, `two-layer-agent-orchestration`, and `financial-reconciliation-discipline`.
+- `Worked example` is now a required skill section in the validator.
+- Two example figures inside skills were replaced with made-up values.
 - The validator report now includes `examples_checked`.
 - The installer help text no longer states a fixed number of subagent specs.
 

@@ -44,6 +44,10 @@ Things break without checks.
 
 Run step one.
 
+## Worked example
+
+One made-up case.
+
 ## Verification checklist
 
 - Output verified.

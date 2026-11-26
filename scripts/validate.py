@@ -38,6 +38,7 @@ REQUIRED_SKILL_SECTIONS = (
     "## The failure mode",
     "## Core rules",
     "## Step-by-step protocol",
+    "## Worked example",
     "## Verification checklist",
     "## Boundaries",
 )

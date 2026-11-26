@@ -7,9 +7,9 @@ description: "Use before merging or shipping any non-trivial code change, automa
 
 ## The failure mode
 
-Self-review by the same agent or engineer that wrote the code systematically misses bugs because the author already shares every hidden assumption made during implementation. Equally broken are diff-only reviews that comment on variable names while missing a broken runtime path, an unexecuted migration, or a silent data mismatch.
+Self-review misses bugs because the same agent or engineer shares every hidden assumption. Diff-only reviews comment on variable names and miss broken runtime paths, unexecuted migrations, or silent data mismatches.
 
-Separating maker from checker, enforcing read-only isolation, and verifying the real output before reading the diff catches planted defects without stalling delivery.
+A separate, read-only reviewer verifies the real output before reading the diff and catches planted defects without stalling delivery.
 
 ## Core rules
 
@@ -70,6 +70,23 @@ VERIFIED
 ### 4. Validate the reviewer itself with planted-fault benchmarks
 
 Do not assume a reviewer prompt works. Periodically run blind benchmarks with real planted bugs (off-by-one totals, missing idempotency checks, dropped auth checks, broken undo scripts) alongside clean control PRs. Measure both recall (planted faults caught) and precision (clean PRs passing at 9 to 10/10 without false alarms).
+
+## Worked example
+
+In this example, a reviewer checks a made-up invoice export. The reviewer runs the sample export first, finds two rows with a blank total, and traces them to one line. One `MUST-FIX` and one `SHOULD-FIX` bring the score to 6/10 (10 minus 3 minus 1).
+
+```text
+VERDICT: FIX THEN SHIP 6/10
+SHA: 4f2a9c1e0b7d3a5c8e6f1b2d4a7c9e0f3b5d8a1c
+MUST-FIX
+- export/invoices.py:88 writes the file before the totals check. `make export-sample` produced 2 rows with a blank total. Fix: run the check first.
+SHOULD-FIX
+- tests/test_export.py has no case for an empty order list.
+NOT CHECKED
+- the email step (no test mailbox in this environment)
+VERIFIED
+- read the output of `make export-sample`; `pytest tests/test_export.py`: 14 passed
+```
 
 ## Verification checklist
 
